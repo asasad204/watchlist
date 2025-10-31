@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Watchlist creator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Choices.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h1> <i class="bi bi-film"></i> Watchlist creator</h1>
+    <p>Build and save your personal movie & series watchlist.</p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="add-media-form" class="row g-3">
+                <div class="col-12">
+                    <label for="category" class="form-label h5">Select Category</label>
+                    <select class="form-select w-100" id="category" name="category" required>
+                        <option value="">Choose...</option>
+                        <option value="Movie">Movies</option>
+                        <option class="border" value="TV Series">TV Series</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label for="title" class="form-label h5">Add Title</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="title" name="title"
+                               placeholder="Enter a movie or series title..." required>
+                        <button type="submit" class="btn btn-light" id="add-title-btn" disabled> <i class="bi bi-plus"></i> </button>
+                    </div>
+                    <small class="text-muted">Please enter a valid title (min 3 characters).</small>
+                </div>
+            </form>
+
+            <form id="save-watchlist-form" method="POST" action="/">
+                <h3 class="mt-4">Your Available Titles</h3>
+                <div class="mb-3">
+                    <label for="media-select" class="form-label"> </label>
+                    <select multiple class="form-select" id="media-select" name="media_ids[]">
+                        <% media.forEach(item => { %>
+                            <option value="<%= item.id %>"><%= item.title %> (<%= item.category %>)</option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-dark w-100" id="save-watchlist-btn" disabled>
+                        <i class="bi bi-save"></i>  SAVE WATCHLIST
+                    </button>
+                    <div id="save-spinner" class="spinner-border text-primary mt-3" role="status" style="display: none;">
+                        <span class="visually-hidden">Saving...</span>
+                    </div>
+
+                </div>
+                <p class="text-center mt-2">Add at least 3 titles to save your watchlist.</p>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2> <i class="bi bi-bar-chart-fill"></i> Most Popular Titles</h2>
+            <table class="table mb-0">
+                <thead>
+                <tr>
+                    <th>Title</th>
+                    <th class="text-end">Count</th>
+                </tr>
+                </thead>
+                <tbody>
+                <% popular.forEach(p => { %>
+                    <tr>
+                        <td><%= p.title %></td>
+                        <td class="text-end"><%= p.count %></td>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+
+            <h2 class="mt-4"><i class="bi bi-book-fill"></i>  All Submitted Watchlists</h2>
+            <table class="table mb-0">
+                <tbody>
+                <% watchlists.forEach((wl, i) => { %>
+                    <tr>
+                        <td><%= wl.name %></td>
+                        <td>
+                            <% if (wl.titles) { %>
+                                <%= wl.titles %>
+                            <% } else { %>
+                                (empty)
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Choices.js JS -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+    let mediaChoices;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const mediaSelect = document.getElementById('media-select');
+        mediaChoices = new Choices(mediaSelect, {
+            removeItemButton: true,
+            searchPlaceholderValue: 'Search titles...',
+            placeholderValue: 'Select titles',
+            shouldSort: false
+        });
+    });
+
+    const category = document.getElementById('category');
+    const title = document.getElementById('title');
+    const addBtn = document.getElementById('add-title-btn');
+    function checkAddFields() {
+        addBtn.disabled = !(category.value && title.value.trim().length >= 3);
+    }
+    category.addEventListener('change', checkAddFields);
+    title.addEventListener('input', checkAddFields);
+
+    document.getElementById('add-media-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const body = Object.fromEntries(formData.entries());
+
+        const res = await fetch('/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Add new option dynamically to Choices
+            mediaChoices.setChoices([{
+                value: data.media.id,
+                label: `${data.media.title} (${data.media.category})`,
+                selected: false
+            }], 'value', 'label', false);
+
+            e.target.reset();
+            checkAddFields();
+        } else {
+            alert(data.message);
+        }
+    });
+
+    // Enable Save button only when >=3 selected
+    const saveBtn = document.getElementById('save-watchlist-btn');
+    function checkWatchlistSelection() {
+        const selectedCount = mediaChoices.getValue(true).length;
+        saveBtn.disabled = selectedCount < 3;
+    }
+    document.addEventListener('change', checkWatchlistSelection);
+    document.getElementById('save-watchlist-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const spinner = document.getElementById('save-spinner');
+        const saveBtn = document.getElementById('save-watchlist-btn');
+
+        // Show spinner and disable button
+        spinner.style.display = 'inline-block';
+        saveBtn.disabled = true;
+
+        const media_ids = mediaChoices.getValue(true);
+
+        const res = await fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ media_ids })
+        });
+
+        const data = await res.json();
+
+        // Hide spinner and re-enable button
+        spinner.style.display = 'none';
+        saveBtn.disabled = false;
+
+        if (data.success) {
+            alert('Watchlist saved!');
+            mediaChoices.removeActiveItems();
+            checkWatchlistSelection();
+        } else {
+            alert(data.message);
+        }
+    });
+</script>
+</body>
+</html>

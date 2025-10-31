@@ -3,15 +3,8 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const session = require('express-session');
-const connectFlash = require('connect-flash');
 
-
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 var watchlistRouter = require('./routes/watchlist');
-var loginRouter = require('./routes/login');
-const {log} = require("debug");
 
 var app = express();
 
@@ -25,33 +18,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-app.use(session({
-  secret: "secret_passcode",
-  cookie: {
-    maxAge: 4000000
-  },
-  resave: false,
-  saveUninitialized: false
-}))
-app.use(connectFlash());
-
-app.use('/login', loginRouter);
-
-app.use((req, res, next) => {
-  // Provera autorizacije
-  if (!req.session.korisnikID) {
-    // Ako korisnik nije autorizovan, preusmeravanje na stranicu za login
-    return res.redirect('/login');
-  }
-  // Ako je korisnik autorizovan, prosleđivanje zahteva dalje
-  next();
-});
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/watchlist', watchlistRouter);
-
-
+app.use('/', watchlistRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
