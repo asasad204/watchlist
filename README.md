@@ -5,4 +5,6 @@ This project requires a `.env` file to run properly. The `.env` file contains se
 ## Setup Instructions
 
 1. **Create a `.env` file** in the root directory of the project.
-2. **Use the `.env.example` file** as a reference for the required keys:
+2. **Use the `.env.example` file** as a reference for the required keys
+3. **npm install
+4. ** npm start
